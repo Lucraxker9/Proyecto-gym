@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Proyecto Gym</title>
+<style>
+:root{--bg:#0b0b0b;--c:#1b1b1b;--t:#f2f2f2;--m:#9a9a9a;--g:#1faa59;--b:#2563eb;--r:#dc2626;color-scheme:dark;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--t);font:18px system-ui,sans-serif;padding:12px;max-width:520px;margin:auto}
+h2{margin:8px 0}button,select,input,textarea{font:inherit;color:var(--t)}
+button{background:#2b2b2b;border:0;border-radius:12px;padding:14px;min-height:52px;width:100%;margin:5px 0;font-weight:600}
+button.g{background:var(--g)}button.b{background:var(--b)}button.r{background:var(--r)}button.s{width:auto;min-width:52px;margin:0}
+input,select,textarea{background:#262626;border:1px solid #444;border-radius:10px;padding:12px;width:100%}
+.card{background:var(--c);border-radius:14px;padding:12px;margin:8px 0}.m{color:var(--m);font-size:15px}
+.row{display:flex;gap:8px;align-items:center}.row>input{text-align:center;font-size:22px}
+.nav{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;position:sticky;bottom:0;background:var(--bg);padding:6px 0}.nav button{font-size:14px;padding:8px}
+#tm{position:sticky;top:0;z-index:5}.tbox{background:var(--b);border-radius:14px;padding:10px;text-align:center}.big{font-size:56px;font-weight:700}
+.r3{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}.r3 button{margin:0;min-height:44px}
+.ok{border:2px solid var(--g)}.chip{display:inline-block;background:#2b2b2b;border-radius:20px;padding:10px 14px;margin:3px}.chip.on{background:var(--b)}
+.bar{height:8px;background:var(--g);border-radius:4px}.goal{background:#3b2f00;border-radius:12px;padding:10px;margin:8px 0}
+</style></head><body>
+<div id="tm"></div><div id="app"></div><div class="nav" id="nav"></div>
+<script>
+const $=i=>document.getElementById(i),esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const TY={B:'barra',Mc:'mancuerna',M:'máquina',P:'polea',C:'peso corporal'};
+const D=[['Pecho','Press banca plano con barra:B,Press banca inclinado con mancuernas:Mc,Press en máquina:M,Aperturas en polea:P,Fondos en paralelas:C,Push-ups:C'],['Espalda','Dominadas:C,Jalón al pecho en polea:P,Remo con barra:B,Remo con mancuerna:Mc,Remo en máquina:M,Peso muerto:B'],['Piernas','Sentadilla con barra:B,Prensa:M,Extensión de cuádriceps en máquina:M,Curl femoral en máquina:M,Peso muerto rumano:B,Estocadas / Zancadas:Mc,Elevación de talones para gemelos:M'],['Hombros','Press militar con barra:B,Press con mancuernas:Mc,Elevaciones laterales:Mc,Elevaciones frontales:Mc,Pájaros / Face pull:P'],['Brazos - Bíceps','Curl con barra:B,Curl con mancuernas:Mc,Curl martillo:Mc,Curl en polea:P,Curl concentrado:Mc'],['Brazos - Tríceps','Fondos en banco:C,Extensión en polea:P,Press francés:B,Patada de tríceps:Mc,Fondos en paralelas:C'],['Abdomen','Crunch:C,Plancha:C,Elevación de piernas:C,Rueda abdominal:C,Crunch en polea:P'],['Glúteos','Hip thrust:B,Patada de glúteo en polea:P,Sentadilla búlgara:Mc,Peso muerto rumano:B'],['Cardio','Cinta:M,Bicicleta:M']];
+const UP=['Pecho','Hombros','Brazos - Bíceps','Brazos - Tríceps'];
+function init(){const ex=[];D.forEach(([g,s])=>s.split(',').forEach(x=>{const[n,t]=x.split(':');ex.push({n,g,t:TY[t]})}));
+return{ex,days:4,rest:90,hist:[],cur:null,T:{},nid:5,routines:[
+{id:1,name:'Día 1 - Pecho + Tríceps',items:['Press banca plano con barra','Press banca inclinado con mancuernas','Extensión en polea','Press francés']},
+{id:2,name:'Día 2 - Espalda + Bíceps',items:['Jalón al pecho en polea','Remo con barra','Curl con barra','Curl martillo']},
+{id:3,name:'Día 3 - Piernas',items:['Sentadilla con barra','Prensa','Curl femoral en máquina','Elevación de talones para gemelos']},
+{id:4,name:'Día 4 - Hombros + Abdomen',items:['Press militar con barra','Elevaciones laterales','Crunch','Plancha']}]}}
+let S;try{S=JSON.parse(localStorage.getItem('gym'))||init()}catch(e){S=init()}
+const save=()=>{try{localStorage.setItem('gym',JSON.stringify(S))}catch(e){}};
+let V='home',ED=null,RV=null,PX='',HD=0,EG='Pecho';
+const grp=n=>(S.ex.find(e=>e.n===n)||{}).g;
+const last=n=>{for(let i=S.hist.length-1;i>=0;i--){const l=S.hist[i].logs.find(l=>l.e===n&&l.sets.length);if(l)return{...l,d:S.hist[i].d}}return null};
+const mw=s=>Math.max(...s.map(x=>x.w)),sr=s=>s.reduce((a,x)=>a+x.r,0),vol=s=>s.reduce((a,x)=>a+x.r*x.w,0);
+const dt=d=>new Date(d).toLocaleDateString('es');
+function go(v){V=v;R()}
+function R(){const a=$('app');({home,rut:rutV,edit:editV,wk,his:hisV,prog:progV,set:setV})[V](a);
+$('nav').innerHTML=[['home','🏠 Inicio'],['rut','📋 Rutinas'],['his','🗓 Historial'],['prog','📈 Progreso']].map(([k,t])=>`<button onclick="go('${k}')">${t}</button>`).join('')+'';
+if(V!=='set')$('nav').innerHTML+='';tick()}
+function home(a){const c=S.cur;let h='<h2>💪 Proyecto Gym</h2>';
+if(c){const r=S.routines.find(x=>x.id==c.rid);h+=`<div class="card ok"><b>Entrenamiento en curso</b><br>${esc(r.name)}<button class="g" onclick="go('wk')">CONTINUAR</button><button class="r" onclick="ask('¿Descartar este entrenamiento?',()=>{S.cur=null;save();R()})">DESCARTAR</button></div>`}
+else{const w0=new Date();w0.setHours(0,0,0,0);w0.setDate(w0.getDate()-(w0.getDay()+6)%7);const nw=S.hist.filter(x=>new Date(x.d)>=w0).length,li=S.routines.findIndex(r=>r.name===(S.hist[S.hist.length-1]||{}).rn),nx=S.routines[(li+1)%S.routines.length];h+=`<div class="card"><div class="big">${nw}/${S.days}</div><div class="m">entrenamientos esta semana</div></div>`+(nx?`<button class="g" style="min-height:90px;font-size:22px" onclick="start(${nx.id})">▶ EMPEZAR HOY<br>${esc(nx.name)}</button>`:'')+'<div class="m">O elegí otra rutina:</div>'+S.routines.map(r=>`<button class="g" onclick="start(${r.id})">${esc(r.name)}</button>`).join('')}
+h+=`<button onclick="go('set')">⚙️ Ajustes (${S.days} días por semana)</button>`;a.innerHTML=h}
+function start(id){try{navigator.wakeLock.request('screen').catch(()=>{})}catch(e){}S.cur={rid:id,i:0,logs:{},end:0,left:0,date:new Date().toISOString()};save();RV=null;go('wk')}
+function initLog(n){const c=S.cur,la=last(n),T=S.T[n]||{};const base=la?la.sets:[{w:0,r:10},{w:0,r:10},{w:0,r:10}];
+return c.logs[n]={sets:base.map(s=>({w:T.w??s.w,r:s.r,ok:0})),note:''}}
+function wk(a){const c=S.cur;if(!c){go('home');return}const r=S.routines.find(x=>x.id==c.rid),n=r.items[c.i];
+if(!n){a.innerHTML=`<h2>¡Listo!</h2><button class="r" onclick="finish()">TERMINAR ENTRENAMIENTO</button>`;return}
+const l=c.logs[n]||initLog(n),T=S.T[n]||{},la=last(n);
+let h=`<div class="m">${esc(r.name)} · ejercicio ${c.i+1} de ${r.items.length}</div><h2>${esc(n)}</h2>`;
+if(RV){h+=review(n,l);a.innerHTML=h;return}
+if(T.ch)h+=`<div class="goal">🎯 Desafío: ${esc(T.ch)} - ¿Lo lográs hoy?</div>`;
+if(la)h+=`<div class="m">Última vez: ${la.sets.map(s=>s.w+' kg x '+s.r).join(' · ')}</div>`;
+const nn=lastNote(n);if(nn)h+=`<div class="card m">Última nota: ${esc(nn.note)} - tenelo en cuenta <button class="s" onclick="editNote()">✏️</button> <button class="s" onclick="delNote()">✕</button></div>`;
+const ci=l.sets.findIndex(s=>!s.ok);l.sets.forEach((s,i)=>{if(s.ok){h+=`<div class="card ok row" onclick="undo(${i})"><b>✔ Serie ${i+1}</b><span style="flex:1;text-align:right">${s.w} kg x ${s.r}</span></div>`;return}if(i!==ci)return;h+=`<div class="card"><b>Serie ${i+1} de ${l.sets.length}</b>
+<div class="row"><button class="s" onclick="adj(${i},'w',-2.5)">−</button><input type="number" inputmode="decimal" step="0.25" value="${s.w}" onchange="setv(${i},'w',this.value)"><button class="s" onclick="adj(${i},'w',2.5)">+</button><span>kg</span></div>
+<div class="row" style="margin-top:6px"><button class="s" onclick="adj(${i},'r',-1)">−</button><input type="number" inputmode="numeric" value="${s.r}" onchange="setv(${i},'r',this.value)"><button class="s" onclick="adj(${i},'r',1)">+</button><span>reps</span></div>
+<button class="g" style="min-height:72px;font-size:22px" onclick="done(${i})">${s.ok?'✔ Hecha (repetir descanso)':'✔ SERIE HECHA'}</button></div>`});
+h+=`<button onclick="addSet()">+ Serie extra</button>
+<button class="r" onclick="endEx()">TERMINAR EJERCICIO</button>`;a.innerHTML=h}
+function lastNote(n){for(let i=S.hist.length-1;i>=0;i--){const l=S.hist[i].logs.find(l=>l.e===n&&l.note);if(l)return l}return null}
+function editNote(){const n=S.routines.find(x=>x.id==S.cur.rid).items[S.cur.i],l=lastNote(n);if(!l)return;mo('<b>Editar nota</b><textarea id="en" rows="3">'+esc(l.note)+'</textarea><button class="g" onclick="sn()">GUARDAR</button><button onclick="mc()">CANCELAR</button>')}
+function undo(i){curL().sets[i].ok=0;save();R()}
+function delNote(){const n=S.routines.find(x=>x.id==S.cur.rid).items[S.cur.i],l=lastNote(n);if(l){l.note='';save();R()}}
+const curL=()=>{const c=S.cur;return c.logs[S.routines.find(x=>x.id==c.rid).items[c.i]]};
+function adj(i,k,d){const s=curL().sets[i];s[k]=Math.max(0,+(s[k]+d).toFixed(2));save();R()}
+function setv(i,k,v){curL().sets[i][k]=Math.max(0,+v||0);save()}
+function done(i){curL().sets[i].ok=1;save();const n=S.routines.find(x=>x.id==S.cur.rid).items[S.cur.i];tstart((S.T[n]||{}).rest||S.rest);R()}
+function addSet(){const L=curL(),s=L.sets[L.sets.length-1]||{w:0,r:10};L.sets.push({w:s.w,r:s.r,ok:0});save();R()}
+function endEx(){const c=S.cur,n=S.routines.find(x=>x.id==c.rid).items[c.i],l=c.logs[n],ds=l.sets.filter(s=>s.ok),la=last(n),T=S.T[n]||{},q=[];
+if(ds.length){if(T.ch)q.push({k:'ch'});const cw=mw(ds),o=[];
+if(la){const lw=mw(la.sets);if(cw>=lw&&sr(ds)>=sr(la.sets)+2)o.push({k:'up',cw});if(cw>lw*1.05&&sr(ds)<=sr(la.sets)*.7)o.push({k:'dn',cw,lw})}
+if(ds.length>=3&&ds[0].r-ds[ds.length-1].r>=4)o.push({k:'rs'});if(o[0])q.push(o[0])}
+RV={n,q,i:0};R()}
+function review(n,l){const c=S.cur,q=RV.q[RV.i],T=S.T[n]||{};let h='';
+if(q){const u=UP.includes(grp(n)),sg=u?'+1.25 a +2.5 kg':'+2.5 a +5 kg';
+if(q.k==='ch')h=`<div class="card"><b>¿Pudiste con el desafío?</b><button class="g" onclick="ans(1)">SÍ, LO LOGRÉ</button><button onclick="ans(0)">NO PUDE TODAVÍA</button></div>`;
+if(q.k==='up')h=`<div class="card"><b>¿Querés subirle peso para la próxima vez?</b><div class="m">Sugerido: ${sg} - ¿Cuánto le subís vos?</div><input id="qi" type="number" step="0.25" inputmode="decimal" value="${u?2.5:5}"><button class="g" onclick="ans(1)">SÍ, GUARDAR AUMENTO</button><button onclick="ans(0)">NO, MANTENER</button></div>`;
+if(q.k==='dn')h=`<div class="card"><b>Se nota que la subida fue mucha. ¿Querés bajarle un poquito?</b><div class="m">Nunca por debajo de ${q.lw} kg (tu última sesión exitosa). Elegí el peso para la próxima:</div><input id="qi" type="number" step="0.25" inputmode="decimal" value="${(q.cw+q.lw)/2}"><button class="g" onclick="ans(1)">SÍ, BAJARLE UN POCO</button><button onclick="ans(0)">NO, LO MANTENGO</button></div>`;
+if(q.k==='rs')h=`<div class="card"><b>¿Querés probar con más descanso la próxima vez para sacar una repe más?</b><div class="m">Si descansás 30 segundos más, capaz sacás 1 repe más. Cuando te acostumbres, bajamos el descanso o subimos el peso. Un cambio chiquito por vez.</div>Segundos extra:<input id="qi" type="number" inputmode="numeric" value="30"><button class="g" onclick="ans(1)">SÍ, MÁS DESCANSO</button><button onclick="ans(0)">NO, LO DEJO ASÍ</button></div>`;
+return RV.msg?`<div class="goal">${RV.msg}</div>`+h:h}
+const last_=c.i+1>=S.routines.find(x=>x.id==c.rid).items.length;
+return `${RV.msg?`<div class="goal">${RV.msg}</div>`:''}<div class="m">El progreso puede ser lento, pero si levantás más peso, hacés más repes o descansás menos y rendís igual, estás mejorando.</div><textarea id="nt" rows="3" placeholder="Nota (opcional)">${esc(l.note||'')}</textarea><button class="g" onclick="nextEx()">${last_?'TERMINAR ✔':'SIGUIENTE EJERCICIO ›'}</button>`}
+function ans(y){const c=S.cur,{n,q,i}=RV,qq=q[i],l=c.logs[n],ds=l.sets.filter(s=>s.ok),la=last(n),v=+(($('qi')||{}).value)||0,T=S.T[n]=S.T[n]||{};let m='';
+if(qq.k==='ch'){if(y){const p=[];if(la){const dw=mw(ds)-mw(la.sets),dr=sr(ds)-sr(la.sets);
+if(dw>0)p.push(`Progresaste en PESO: de ${mw(la.sets)} kg a ${mw(ds)} kg`);if(dr>0)p.push(`Progresaste en REPES: ${dr} repes más que la última vez`);
+if(la.rest>(T.rest||S.rest)&&sr(ds)>=sr(la.sets))p.push(`Progresaste en DESCANSO: ${la.rest-(T.rest||S.rest)} seg menos por serie y rendiste igual`);if(vol(ds)>vol(la.sets))p.push(`Volumen total hoy: ${vol(ds)} kg, la última vez ${vol(la.sets)} kg`)}
+m='¡Excelente! Lo lograste 💪<br>'+p.join('<br>');T.ch='';l.ach=1}else m='No te preocupes, el proceso es lento. Lo importante es que viniste y lo intentaste. La próxima sale. Te dejo el mismo desafío.'}
+if(qq.k==='up'&&y&&v>0){T.w=+(qq.cw+v).toFixed(2);T.ch=`Más peso: ${T.w} kg`;m=`Guardado: próxima vez ${T.w} kg`}
+if(qq.k==='dn'){T.w=y?Math.max(qq.lw,+v||qq.cw):qq.cw;T.ch=`Más peso: ${T.w} kg`;m=`Próxima vez: ${T.w} kg`}
+if(qq.k==='rs'&&y&&v>0){T.rest=(T.rest||S.rest)+v;m=`Descanso para este ejercicio: ${T.rest} s`}
+RV.msg=m;RV.i++;save();R()}
+function nextEx(){const c=S.cur,n=RV.n,l=c.logs[n];l.note=($('nt')||{}).value||'';l.rest=(S.T[n]||{}).rest||S.rest;RV=null;c.i++;save();
+if(c.i>=S.routines.find(x=>x.id==c.rid).items.length)finish();else R()}
+function finish(){const c=S.cur,r=S.routines.find(x=>x.id==c.rid),logs=Object.entries(c.logs).map(([e,l])=>({e,sets:l.sets.filter(s=>s.ok).map(s=>({w:s.w,r:s.r})),note:l.note,rest:l.rest||S.rest,ach:l.ach}));
+S.hist.push({d:c.date,rn:r.name,logs});S.cur=null;c.end=0;save();RV=null;autoBk().then(ok=>{if(ok)tt('✔ Copia guardada en Documentos/ProyectoGym');else askBk()});go('his')}
+function hisV(a){let h='<h2>Historial</h2>';
+if(HD){const x=S.hist[HD-1];h+=`<button onclick="HD=0;R()">‹ Volver</button><button class="r" onclick="ask('¿Borrar este entrenamiento?',()=>{S.hist.splice(${HD-1},1);HD=0;save();R()})">Borrar entrenamiento</button><div class="card"><b>${esc(x.rn)}</b><div class="m">${dt(x.d)}</div></div>`+x.logs.filter(l=>l.sets.length).map(l=>`<div class="card"><b>${esc(l.e)}${l.ach?' 🎯':''}</b><div class="m">${l.sets.map(s=>s.w+' kg x '+s.r).join(' · ')}<br>Descanso: ${l.rest} s${l.note?'<br>📝 '+esc(l.note):''}</div></div>`).join('')}
+else h+=(S.hist.map((x,i)=>`<button onclick="HD=${i+1};R()">${dt(x.d)} · ${esc(x.rn)}</button>`).reverse().join('')||'<div class="m">Todavía no hay entrenamientos.</div>');a.innerHTML=h}
+function progV(a){const names=[...new Set(S.hist.flatMap(h=>h.logs.filter(l=>l.sets.length).map(l=>l.e)))];let h='<h2>Progreso</h2>';
+if(!names.length){a.innerHTML=h+'<div class="m">Cuando termines un entrenamiento vas a ver tu evolución acá.</div>';return}
+h+=`<select onchange="PX=this.value;R()"><option value="">Elegí un ejercicio</option>${names.map(n=>`<option ${n===PX?'selected':''}>${esc(n)}</option>`).join('')}</select>`;
+if(PX){const ss=S.hist.map(x=>({d:x.d,l:x.logs.find(l=>l.e===PX&&l.sets.length)})).filter(x=>x.l);let b=null;ss.forEach(x=>x.l.sets.forEach(s=>{if(!b||s.w>b.w||(s.w===b.w&&s.r>b.r))b={...s,d:x.d}}));
+const mx=Math.max(...ss.map(x=>mw(x.l.sets)))||1;const ch=(t,f,u)=>{const v=ss.map(f),lo=Math.min(...v),hi=Math.max(...v),pt=v.map((y,i)=>(v.length>1?i/(v.length-1)*300:150)+','+(55-(hi===lo?25:(y-lo)/(hi-lo)*50))).join(' ');return `<div class="card"><b>${t}</b> <span class="m">último: ${v[v.length-1]} ${u}</span><svg viewBox="0 0 300 60" width="100%" height="70"><polyline points="${pt}" fill="none" stroke="#1faa59" stroke-width="3"/></svg></div>`};
+h+=`<div class="card ok">🏆 Tu máximo: ${b.w} kg x ${b.r} repes - ${dt(b.d)}</div>`+ch('Peso',x=>mw(x.l.sets),'kg')+ch('Repeticiones',x=>sr(x.l.sets),'')+ch('Descanso',x=>x.l.rest,'s')+ss.map(x=>`<div class="card"><b>${dt(x.d)}</b><div class="m">Peso: ${mw(x.l.sets)} kg · Repes: ${sr(x.l.sets)} · Descanso: ${x.l.rest} s</div><div class="bar" style="width:${mw(x.l.sets)/mx*100}%"></div></div>`).join('')}
+a.innerHTML=h+'<div class="m">Progresar es más peso, más repes, o menos descanso rindiendo igual.</div>'}
+function rutV(a){a.innerHTML='<h2>Rutinas</h2>'+S.routines.map((r,i)=>`<button onclick="edit(${i})">${esc(r.name)} (${r.items.length})</button>`).join('')+'<button class="g" onclick="edit(-1)">+ NUEVA RUTINA</button>'}
+function edit(i){ED=i<0?{id:S.nid++,name:'Día '+(S.routines.length+1),items:[],isNew:1}:JSON.parse(JSON.stringify(S.routines[i]));go('edit')}
+function editV(a){const sel=ED.items;let h=`<h2>Rutina</h2><input value="${esc(ED.name)}" onchange="ED.name=this.value" placeholder="Nombre">
+<div class="card"><b>Elegida:</b>${sel.map((n,i)=>`<div class="row"><span style="flex:1">${esc(n)}</span><button class="s" onclick="mv(${i},-1)">↑</button><button class="s" onclick="mv(${i},1)">↓</button><button class="s r" onclick="ED.items.splice(${i},1);R()">✕</button></div>`).join('')||'<div class="m">Vacía</div>'}</div>
+<div class="m">Grupo muscular:</div>${[...new Set(S.ex.map(e=>e.g))].map(g=>`<span class="chip ${g===EG?'on':''}" onclick="EG='${g}';R()">${g}</span>`).join('')}`;
+S.ex.forEach((e,i)=>{if(e.g===EG)h+=`<button class="${sel.includes(e.n)?'g':''}" onclick="tog(${i})">${sel.includes(e.n)?'✔ ':''}${esc(e.n)} <span class="m">· ${e.t}</span></button>`});
+h+=`<div class="card"><b>Ejercicio propio en ${EG}</b><input id="cn" placeholder="Nombre"><select id="ct">${Object.values(TY).map(t=>`<option>${t}</option>`).join('')}</select><button onclick="custom()">Agregar a la lista</button></div>
+<button class="g" onclick="saveR()">GUARDAR RUTINA</button>${ED.isNew?'':`<button class="r" onclick="delR()">BORRAR RUTINA</button>`}<button onclick="go('rut')">Cancelar</button>`;a.innerHTML=h}
+function tog(i){const n=S.ex[i].n,k=ED.items.indexOf(n);k<0?ED.items.push(n):ED.items.splice(k,1);R()}
+function mv(i,d){const j=i+d,x=ED.items;if(j<0||j>=x.length)return;[x[i],x[j]]=[x[j],x[i]];R()}
+function custom(){const n=$('cn').value.trim();if(!n)return;S.ex.push({n,g:EG,t:$('ct').value});ED.items.push(n);save();R()}
+function saveR(){const k=S.routines.findIndex(r=>r.id===ED.id);delete ED.isNew;k<0?S.routines.push(ED):S.routines[k]=ED;save();go('rut')}
+function delR(){ask('¿Borrar esta rutina? El historial se conserva.',()=>{S.routines=S.routines.filter(r=>r.id!==ED.id);save();go('rut')})}
+function setV(a){a.innerHTML=`<h2>Ajustes</h2><div class="card"><b>Días de entrenamiento por semana</b><select onchange="S.days=+this.value;save();R()">${[1,2,3,4,5,6,7].map(n=>`<option ${n===S.days?'selected':''}>${n}</option>`).join('')}</select>
+<div class="m">Tenés ${S.routines.length} rutinas. Ajustalas en Rutinas; tu historial no se borra.</div></div>
+<div class="card"><b>Descanso por defecto: ${S.rest} s</b><div class="r3">${[60,90,120,180].map(n=>`<button onclick="S.rest=${n};save();R()">${n}</button>`).join('')}</div><input type="number" inputmode="numeric" placeholder="Otro tiempo (seg)" onchange="S.rest=+this.value||90;save();R()"></div><div class="card"><b>Copia de seguridad</b><div class="m">Se guarda sola al terminar cada entrenamiento en Documentos/ProyectoGym/respaldo.txt (solo en la APK).${S.lastBk?' Última: '+dt(S.lastBk):''}</div><button class="g" onclick="bkNow()">Guardar copia ahora</button><button class="b" onclick="dlTxt()">⬇ Descargar copia (.txt)</button><button onclick="shareBk()">Compartir copia (Drive, etc.)</button><button onclick="pickFile()">⬆ Restaurar desde archivo .txt</button><button onclick="bk2()">Copiar / restaurar con texto</button></div><button onclick="go('home')">‹ Volver</button>`}
+function bk(){const t=JSON.stringify(S);try{navigator.clipboard.writeText(t).then(()=>alert('Copiado. Pegalo en una nota para guardarlo.')).catch(()=>prompt('Copiá este texto',t))}catch(e){prompt('Copiá este texto',t)}}
+function rs(){const t=prompt('Pegá tu copia');if(!t)return;try{S=JSON.parse(t);save();go('home')}catch(e){alert('Copia inválida')}}
+let CB=null;
+function tt(m){let e=$('tt');if(!e){e=document.createElement('div');e.id='tt';e.style.cssText='position:fixed;left:12px;right:12px;bottom:80px;background:#1faa59;color:#fff;border-radius:12px;padding:14px;z-index:9;text-align:center';document.body.appendChild(e)}e.textContent=m;e.style.display='block';clearTimeout(e._t);e._t=setTimeout(()=>e.style.display='none',4000)}
+const CP=()=>window.Capacitor&&Capacitor.Plugins||{};
+async function autoBk(){const F=CP().Filesystem;if(!F)return 0;try{try{await F.requestPermissions()}catch(e){}await F.writeFile({path:'ProyectoGym/respaldo.txt',data:JSON.stringify(S),directory:'DOCUMENTS',encoding:'utf8',recursive:true});S.lastBk=new Date().toISOString();save();return 1}catch(e){return 0}}
+function bkNow(){autoBk().then(ok=>{tt(ok?'✔ Copia guardada en Documentos/ProyectoGym':'La copia automática solo funciona en la APK');R()})}
+function okData(t){try{const o=JSON.parse(t);return o&&Array.isArray(o.routines)&&Array.isArray(o.hist)&&Array.isArray(o.ex)?o:null}catch(e){return null}}
+function askBk(){mo('<b>¿Querés guardar una copia de seguridad?</b><div class="m">Se guarda un archivo .txt con todos tus datos, por si cambiás o perdés el celular. Después lo importás desde Ajustes.</div><button class="g" onclick="mc();dlTxt()">SÍ, GUARDAR COPIA</button><button onclick="mc()">AHORA NO</button><button onclick="mc();bk2()">Copiar el texto (si no descarga)</button>')}
+async function dlTxt(){const t=JSON.stringify(S),fn='respaldo-gym-'+new Date().toLocaleDateString('sv')+'.txt';
+if(CP().Filesystem&&await autoBk()){tt('✔ Guardado en Documentos/ProyectoGym/respaldo.txt');R();return}
+try{const u=URL.createObjectURL(new Blob([t],{type:'text/plain'})),a=document.createElement('a');a.href=u;a.download=fn;a.style.display='none';document.body.appendChild(a);a.click();setTimeout(()=>{a.remove();URL.revokeObjectURL(u)},60000);tt('Descarga iniciada: '+fn+' (mirá en Descargas)')}catch(e){bk2()}}
+function pickFile(){const i=document.createElement('input');i.type='file';i.accept='.txt,.json,text/plain';i.onchange=()=>{const f=i.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{const o=okData(r.result);if(!o){tt('Ese archivo no es una copia válida. No se cambió nada.');return}ask('Esto reemplaza tus datos actuales ('+S.hist.length+' entrenamientos) por la copia ('+o.hist.length+'). ¿Seguir?',()=>{S=Object.assign(init(),o);save();go('home');tt('✔ Copia restaurada')})};r.onerror=()=>tt('No se pudo leer el archivo');r.readAsText(f)};i.click()}
+async function shareBk(){const C=CP();if(!C.Share||!C.Filesystem){tt('Compartir solo funciona en la APK');return}try{await autoBk();const u=await C.Filesystem.getUri({path:'ProyectoGym/respaldo.txt',directory:'DOCUMENTS'});await C.Share.share({title:'Respaldo Proyecto Gym',url:u.uri})}catch(e){tt('No se pudo compartir')}}
+function mo(h){let m=$('mo');if(!m){m=document.createElement('div');m.id='mo';m.style.cssText='position:fixed;inset:0;background:#000c;z-index:9;align-items:center;justify-content:center;padding:16px';document.body.appendChild(m)}m.innerHTML='<div class="card" style="width:100%;max-width:480px;max-height:90vh;overflow:auto">'+h+'</div>';m.style.display='flex'}
+function mc(){const m=$('mo');if(m)m.style.display='none'}
+function ask(t,f){CB=f;mo('<b>'+t+'</b><button class="r" onclick="mc();CB()">SÍ</button><button onclick="mc()">CANCELAR</button>')}
+function sn(){lastNote(S.routines.find(x=>x.id==S.cur.rid).items[S.cur.i]).note=$('en').value;save();mc();R()}
+function bk2(){mo(`<b>Copia de seguridad</b><div class="m">Tocá COPIAR y pegalo en una nota. Para restaurar, pegá tu texto acá (borrando el que hay) y tocá RESTAURAR.</div><textarea id="bt" rows="6">${esc(JSON.stringify(S))}</textarea><div id="bm" class="m"></div><button class="g" onclick="cp()">COPIAR</button><button class="b" onclick="rs2()">RESTAURAR DESDE EL TEXTO</button><button onclick="mc()">CERRAR</button>`)}
+function cp(){const t=$('bt');t.select();t.setSelectionRange(0,1e9);let ok=0;try{ok=document.execCommand('copy')}catch(e){}try{navigator.clipboard.writeText(t.value);ok=1}catch(e){}$('bm').textContent=ok?'¡Copiado!':'Si no se copió, mantené apretado el texto y elegí Copiar'}
+function rs2(){try{const o=okData($('bt').value);if(!o)throw 0;S=Object.assign(init(),o);save();mc();go('home')}catch(e){$('bm').textContent='Texto inválido: no se restauró nada'}}
+function tstart(s){const c=S.cur;if(!c)return;c.end=Date.now()+s*1000;c.left=0;c.fin=0;save();tick()}
+function tadd(){const c=S.cur;c.end?c.end+=3e4:c.left+=30;save();tick()}
+function tpause(){const c=S.cur;if(c.end){c.left=Math.ceil((c.end-Date.now())/1000);c.end=0}else if(c.left){c.end=Date.now()+c.left*1000;c.left=0}save();tick()}
+function tskip(){const c=S.cur;c.end=0;c.left=0;c.fin=0;save();tick()}
+function beep(){try{navigator.vibrate&&navigator.vibrate([300,100,300,100,300]);const x=new(window.AudioContext||window.webkitAudioContext)(),o=x.createOscillator();o.connect(x.destination);o.frequency.value=880;o.start();o.stop(x.currentTime+.5)}catch(e){}}
+const fm=s=>Math.floor(s/60)+':'+String(s%60).padStart(2,'0');let lh='';
+function tick(){const c=S.cur,e=$('tm');let h='';
+if(c){if(c.end&&c.end-Date.now()<=0){c.end=0;c.left=0;c.fin=1;save();beep()}
+if(c.end||c.left){const s=c.end?Math.ceil((c.end-Date.now())/1000):c.left;h=`<div class="tbox"><div class="big">${fm(s)}</div><div class="r3"><button onclick="tadd()">+30 seg</button><button onclick="tpause()">${c.end?'PAUSAR':'SEGUIR'}</button><button onclick="tskip()">SALTAR</button></div></div>`}
+else if(c.fin)h=`<div class="tbox" style="background:var(--g)" onclick="tskip()">¡Descanso terminado! A darle 💪</div>`}
+if(h!==lh){e.innerHTML=h;lh=h}}
+setInterval(tick,250);R();
+(async()=>{if(localStorage.getItem('gym'))return;const F=CP().Filesystem;if(!F)return;try{const r=await F.readFile({path:'ProyectoGym/respaldo.txt',directory:'DOCUMENTS',encoding:'utf8'}),o=okData(r.data);if(o)ask('Encontré una copia guardada ('+o.hist.length+' entrenamientos). ¿Restaurarla?',()=>{S=Object.assign(init(),o);save();go('home')})}catch(e){}})();
+</script></body></html>
