@@ -4,14 +4,14 @@
 <title>Proyecto Gym</title>
 <style>
 :root{--bg:#0b0b0b;--c:#1b1b1b;--t:#f2f2f2;--m:#9a9a9a;--g:#1faa59;--b:#2563eb;--r:#dc2626;color-scheme:dark;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--t);font:18px system-ui,sans-serif;padding:12px;max-width:520px;margin:auto}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--t);font:18px system-ui,sans-serif;padding:12px 12px 110px;max-width:520px;margin:auto}
 h2{margin:8px 0}button,select,input,textarea{font:inherit;color:var(--t)}
 button{background:#2b2b2b;border:0;border-radius:12px;padding:14px;min-height:52px;width:100%;margin:5px 0;font-weight:600}
 button.g{background:var(--g)}button.b{background:var(--b)}button.r{background:var(--r)}button.s{width:auto;min-width:52px;margin:0}
 input,select,textarea{background:#262626;border:1px solid #444;border-radius:10px;padding:12px;width:100%}
 .card{background:var(--c);border-radius:14px;padding:12px;margin:8px 0}.m{color:var(--m);font-size:15px}
 .row{display:flex;gap:8px;align-items:center}.row>input{text-align:center;font-size:22px}
-.nav{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;position:sticky;bottom:0;background:var(--bg);padding:6px 0}.nav button{font-size:14px;padding:8px}
+.nav{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;position:fixed;left:50%;transform:translateX(-50%);bottom:0;width:100%;max-width:520px;background:var(--bg);padding:8px 12px calc(8px + env(safe-area-inset-bottom,0px));z-index:6;box-sizing:border-box}.nav button{font-size:14px;padding:8px}
 #tm{position:sticky;top:0;z-index:5}.tbox{background:var(--b);border-radius:14px;padding:10px;text-align:center}.big{font-size:56px;font-weight:700}
 .r3{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}.r3 button{margin:0;min-height:44px}
 .ok{border:2px solid var(--g)}.chip{display:inline-block;background:#2b2b2b;border-radius:20px;padding:10px 14px;margin:3px}.chip.on{background:var(--b)}
@@ -96,7 +96,7 @@ RV.msg=m;RV.i++;save();R()}
 function nextEx(){const c=S.cur,n=RV.n,l=c.logs[n];l.note=($('nt')||{}).value||'';l.rest=(S.T[n]||{}).rest||S.rest;RV=null;c.i++;save();
 if(c.i>=S.routines.find(x=>x.id==c.rid).items.length)finish();else R()}
 function finish(){const c=S.cur,r=S.routines.find(x=>x.id==c.rid),logs=Object.entries(c.logs).map(([e,l])=>({e,sets:l.sets.filter(s=>s.ok).map(s=>({w:s.w,r:s.r})),note:l.note,rest:l.rest||S.rest,ach:l.ach}));
-S.hist.push({d:c.date,rn:r.name,logs});S.cur=null;c.end=0;save();RV=null;autoBk().then(ok=>{if(ok)tt('✔ Copia guardada en Documentos/ProyectoGym');else askBk()});go('his')}
+S.hist.push({d:c.date,rn:r.name,logs});S.cur=null;c.end=0;save();RV=null;autoBk().then(ok=>{if(ok===1)tt('✔ Copia guardada en Documentos/ProyectoGym');else askBk()});go('his')}
 function hisV(a){let h='<h2>Historial</h2>';
 if(HD){const x=S.hist[HD-1];h+=`<button onclick="HD=0;R()">‹ Volver</button><button class="r" onclick="ask('¿Borrar este entrenamiento?',()=>{S.hist.splice(${HD-1},1);HD=0;save();R()})">Borrar entrenamiento</button><div class="card"><b>${esc(x.rn)}</b><div class="m">${dt(x.d)}</div></div>`+x.logs.filter(l=>l.sets.length).map(l=>`<div class="card"><b>${esc(l.e)}${l.ach?' 🎯':''}</b><div class="m">${l.sets.map(s=>s.w+' kg x '+s.r).join(' · ')}<br>Descanso: ${l.rest} s${l.note?'<br>📝 '+esc(l.note):''}</div></div>`).join('')}
 else h+=(S.hist.map((x,i)=>`<button onclick="HD=${i+1};R()">${dt(x.d)} · ${esc(x.rn)}</button>`).reverse().join('')||'<div class="m">Todavía no hay entrenamientos.</div>');a.innerHTML=h}
@@ -126,17 +126,17 @@ function setV(a){a.innerHTML=`<h2>Ajustes</h2><div class="card"><b>Días de entr
 function bk(){const t=JSON.stringify(S);try{navigator.clipboard.writeText(t).then(()=>alert('Copiado. Pegalo en una nota para guardarlo.')).catch(()=>prompt('Copiá este texto',t))}catch(e){prompt('Copiá este texto',t)}}
 function rs(){const t=prompt('Pegá tu copia');if(!t)return;try{S=JSON.parse(t);save();go('home')}catch(e){alert('Copia inválida')}}
 let CB=null;
-function tt(m){let e=$('tt');if(!e){e=document.createElement('div');e.id='tt';e.style.cssText='position:fixed;left:12px;right:12px;bottom:80px;background:#1faa59;color:#fff;border-radius:12px;padding:14px;z-index:9;text-align:center';document.body.appendChild(e)}e.textContent=m;e.style.display='block';clearTimeout(e._t);e._t=setTimeout(()=>e.style.display='none',4000)}
+function tt(m,ms){let e=$('tt');if(!e){e=document.createElement('div');e.id='tt';e.style.cssText='position:fixed;left:12px;right:12px;bottom:80px;background:#1faa59;color:#fff;border-radius:12px;padding:14px;z-index:9;text-align:center';document.body.appendChild(e)}e.textContent=m;e.style.display='block';clearTimeout(e._t);e._t=setTimeout(()=>e.style.display='none',ms||4000)}
 const CP=()=>window.Capacitor&&Capacitor.Plugins||{};
-async function autoBk(){const F=CP().Filesystem;if(!F)return 0;try{try{await F.requestPermissions()}catch(e){}await F.writeFile({path:'ProyectoGym/respaldo.txt',data:JSON.stringify(S),directory:'DOCUMENTS',encoding:'utf8',recursive:true});S.lastBk=new Date().toISOString();save();return 1}catch(e){return 0}}
-function bkNow(){autoBk().then(ok=>{tt(ok?'✔ Copia guardada en Documentos/ProyectoGym':'La copia automática solo funciona en la APK');R()})}
+async function autoBk(){const F=CP().Filesystem;if(!F)return 0;try{await F.requestPermissions()}catch(e){}let er='';for(const d of ['DOCUMENTS','EXTERNAL']){try{await F.writeFile({path:'ProyectoGym/respaldo.txt',data:JSON.stringify(S),directory:d,encoding:'utf8',recursive:true});S.lastBk=new Date().toISOString();S.bkErr=er;save();return d==='DOCUMENTS'?1:2}catch(e){er=er||String(e&&e.message||e)}}S.bkErr=er;save();return 0}
+function bkNow(){autoBk().then(ok=>{tt(ok===1?'✔ Copia guardada en Documentos/ProyectoGym':CP().Filesystem?'No se pudo guardar en Documentos ('+(S.bkErr||'sin permiso')+'). Usá "Compartir copia".':'La copia automática solo funciona en la APK',7000);R()})}
 function okData(t){try{const o=JSON.parse(t);return o&&Array.isArray(o.routines)&&Array.isArray(o.hist)&&Array.isArray(o.ex)?o:null}catch(e){return null}}
 function askBk(){mo('<b>¿Querés guardar una copia de seguridad?</b><div class="m">Se guarda un archivo .txt con todos tus datos, por si cambiás o perdés el celular. Después lo importás desde Ajustes.</div><button class="g" onclick="mc();dlTxt()">SÍ, GUARDAR COPIA</button><button onclick="mc()">AHORA NO</button><button onclick="mc();bk2()">Copiar el texto (si no descarga)</button>')}
 async function dlTxt(){const t=JSON.stringify(S),fn='respaldo-gym-'+new Date().toLocaleDateString('sv')+'.txt';
-if(CP().Filesystem&&await autoBk()){tt('✔ Guardado en Documentos/ProyectoGym/respaldo.txt');R();return}
+if(CP().Filesystem){if(await autoBk()===1){tt('✔ Guardado en Documentos/ProyectoGym/respaldo.txt');R();return}await shareBk();return}
 try{const u=URL.createObjectURL(new Blob([t],{type:'text/plain'})),a=document.createElement('a');a.href=u;a.download=fn;a.style.display='none';document.body.appendChild(a);a.click();setTimeout(()=>{a.remove();URL.revokeObjectURL(u)},60000);tt('Descarga iniciada: '+fn+' (mirá en Descargas)')}catch(e){bk2()}}
 function pickFile(){const i=document.createElement('input');i.type='file';i.accept='.txt,.json,text/plain';i.onchange=()=>{const f=i.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{const o=okData(r.result);if(!o){tt('Ese archivo no es una copia válida. No se cambió nada.');return}ask('Esto reemplaza tus datos actuales ('+S.hist.length+' entrenamientos) por la copia ('+o.hist.length+'). ¿Seguir?',()=>{S=Object.assign(init(),o);save();go('home');tt('✔ Copia restaurada')})};r.onerror=()=>tt('No se pudo leer el archivo');r.readAsText(f)};i.click()}
-async function shareBk(){const C=CP();if(!C.Share||!C.Filesystem){tt('Compartir solo funciona en la APK');return}try{await autoBk();const u=await C.Filesystem.getUri({path:'ProyectoGym/respaldo.txt',directory:'DOCUMENTS'});await C.Share.share({title:'Respaldo Proyecto Gym',url:u.uri})}catch(e){tt('No se pudo compartir')}}
+async function shareBk(){const C=CP();if(!C.Share||!C.Filesystem){tt('Compartir solo funciona en la APK');return}const fn='respaldo-gym-'+new Date().toLocaleDateString('sv')+'.txt';try{await C.Filesystem.writeFile({path:fn,data:JSON.stringify(S),directory:'CACHE',encoding:'utf8'});const u=await C.Filesystem.getUri({path:fn,directory:'CACHE'});await C.Share.share({title:'Copia de seguridad Proyecto Gym',dialogTitle:'Guardar copia de seguridad',url:u.uri})}catch(e){const m=String(e&&e.message||e);if(!/cancel/i.test(m))tt('No se pudo compartir: '+m,7000)}}
 function mo(h){let m=$('mo');if(!m){m=document.createElement('div');m.id='mo';m.style.cssText='position:fixed;inset:0;background:#000c;z-index:9;align-items:center;justify-content:center;padding:16px';document.body.appendChild(m)}m.innerHTML='<div class="card" style="width:100%;max-width:480px;max-height:90vh;overflow:auto">'+h+'</div>';m.style.display='flex'}
 function mc(){const m=$('mo');if(m)m.style.display='none'}
 function ask(t,f){CB=f;mo('<b>'+t+'</b><button class="r" onclick="mc();CB()">SÍ</button><button onclick="mc()">CANCELAR</button>')}
@@ -156,5 +156,5 @@ if(c.end||c.left){const s=c.end?Math.ceil((c.end-Date.now())/1000):c.left;h=`<di
 else if(c.fin)h=`<div class="tbox" style="background:var(--g)" onclick="tskip()">¡Descanso terminado! A darle 💪</div>`}
 if(h!==lh){e.innerHTML=h;lh=h}}
 setInterval(tick,250);R();
-(async()=>{if(localStorage.getItem('gym'))return;const F=CP().Filesystem;if(!F)return;try{const r=await F.readFile({path:'ProyectoGym/respaldo.txt',directory:'DOCUMENTS',encoding:'utf8'}),o=okData(r.data);if(o)ask('Encontré una copia guardada ('+o.hist.length+' entrenamientos). ¿Restaurarla?',()=>{S=Object.assign(init(),o);save();go('home')})}catch(e){}})();
+(async()=>{if(localStorage.getItem('gym'))return;const F=CP().Filesystem;if(!F)return;try{let r;try{r=await F.readFile({path:'ProyectoGym/respaldo.txt',directory:'DOCUMENTS',encoding:'utf8'})}catch(e){r=await F.readFile({path:'ProyectoGym/respaldo.txt',directory:'EXTERNAL',encoding:'utf8'})}const o=okData(r.data);if(o)ask('Encontré una copia guardada ('+o.hist.length+' entrenamientos). ¿Restaurarla?',()=>{S=Object.assign(init(),o);save();go('home')})}catch(e){}})();
 </script></body></html>
