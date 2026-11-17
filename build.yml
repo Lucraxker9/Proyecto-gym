@@ -1,27 +1,68 @@
-name: Crear APK
+name: Build APK
+
 on:
   push:
+    branches: [ main ]
   workflow_dispatch:
+
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Descargar código
+        uses: actions/checkout@v4
+
+      - name: Instalar Node
+        uses: actions/setup-node@v4
         with:
           node-version: 20
-      - uses: actions/setup-java@v4
+
+      - name: Instalar Java
+        uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 17
-      - name: Preparar web
-        run: mkdir -p www && cp index.html www/index.html
-      - run: npm install
-      - run: npx cap add android
-      - run: npx cap sync android
+
+      - name: Instalar dependencias
+        run: npm install
+
+      - name: Crear carpeta Android
+        run: npx cap add android
+
+      - name: Sincronizar web a Android
+        run: npx cap sync android
+
+      - name: Permisos de archivos
+        run: |
+          MANIFEST=android/app/src/main/AndroidManifest.xml
+          python3 - << 'PY'
+          import pathlib
+          p = pathlib.Path("android/app/src/main/AndroidManifest.xml")
+          text = p.read_text()
+          if "READ_EXTERNAL_STORAGE" not in text:
+              text = text.replace("<manifest", '<manifest xmlns:tools="http://schemas.android.com/tools"', 1)
+              text = text.replace(
+                  "<application",
+                  '<uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />\n'
+                  '<uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />\n'
+                  '<application android:requestLegacyExternalStorage="true"',
+                  1
+              )
+              p.write_text(text)
+              print("Permisos agregados")
+          else:
+              print("Ya tenía permisos")
+          PY
+
       - name: Compilar APK
-        run: cd android && chmod +x gradlew && ./gradlew assembleDebug
-      - uses: actions/upload-artifact@v4
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug
+
+      - name: Subir APK
+        uses: actions/upload-artifact@v4
         with:
-          name: proyecto-gym-apk
+          name: gym-app
           path: android/app/build/outputs/apk/debug/app-debug.apk
