@@ -35,13 +35,13 @@ jobs:
 
       - name: Permisos de archivos
         run: |
-          MANIFEST=android/app/src/main/AndroidManifest.xml
           python3 - << 'PY'
           import pathlib
           p = pathlib.Path("android/app/src/main/AndroidManifest.xml")
           text = p.read_text()
+          print("--- ANTES ---")
+          print(text[:1000])
           if "READ_EXTERNAL_STORAGE" not in text:
-              text = text.replace("<manifest", '<manifest xmlns:tools="http://schemas.android.com/tools"', 1)
               text = text.replace(
                   "<application",
                   '<uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />\n'
@@ -50,9 +50,11 @@ jobs:
                   1
               )
               p.write_text(text)
-              print("Permisos agregados")
+              print("Permisos agregados OK")
           else:
               print("Ya tenía permisos")
+          print("--- DESPUES ---")
+          print(p.read_text()[:2000])
           PY
 
       - name: Compilar APK
